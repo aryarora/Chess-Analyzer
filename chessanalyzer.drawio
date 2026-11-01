@@ -1,0 +1,79 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="qKrEmqAig3H3YcqB8cs5">
+    <mxGraphModel dx="1006" dy="566" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-3" edge="1" parent="1" source="JyAuPF43QcO3eOV_d5FG-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;defaultLabelBackgroundColor=page;" target="JyAuPF43QcO3eOV_d5FG-2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-14" connectable="0" parent="JyAuPF43QcO3eOV_d5FG-3" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];inheritText=1;defaultLabelBackgroundColor=page;" value="FEN Position" vertex="1">
+          <mxGeometry relative="1" x="-0.15" y="-5" as="geometry">
+            <mxPoint x="4" y="5" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="User enters a chess position." vertex="1">
+          <mxGeometry height="60" width="120" x="30" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-5" edge="1" parent="1" source="JyAuPF43QcO3eOV_d5FG-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;defaultLabelBackgroundColor=page;" target="JyAuPF43QcO3eOV_d5FG-4" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-15" connectable="0" parent="JyAuPF43QcO3eOV_d5FG-5" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];inheritText=1;defaultLabelBackgroundColor=page;" value="Current Board" vertex="1">
+          <mxGeometry relative="1" x="-0.325" as="geometry">
+            <mxPoint x="10" y="10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-2" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="&lt;li&gt;&lt;p&gt;The input is passed to the Chessboard.&lt;/p&gt;&lt;/li&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="230" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-7" edge="1" parent="1" source="JyAuPF43QcO3eOV_d5FG-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;defaultLabelBackgroundColor=page;" target="JyAuPF43QcO3eOV_d5FG-6" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-17" connectable="0" parent="JyAuPF43QcO3eOV_d5FG-7" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];inheritText=1;defaultLabelBackgroundColor=page;" value="Legal Moves" vertex="1">
+          <mxGeometry relative="1" x="-0.025" y="2" as="geometry">
+            <mxPoint y="12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-4" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="&lt;li&gt;&lt;p&gt;The Move Generator finds all legal moves.&lt;/p&gt;&lt;/li&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="430" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-9" edge="1" parent="1" source="JyAuPF43QcO3eOV_d5FG-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;defaultLabelBackgroundColor=page;" target="JyAuPF43QcO3eOV_d5FG-8" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-18" connectable="0" parent="JyAuPF43QcO3eOV_d5FG-9" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];inheritText=1;defaultLabelBackgroundColor=page;" value="Board Positions" vertex="1">
+          <mxGeometry relative="1" x="-0.025" y="1" as="geometry">
+            <mxPoint x="1" y="11" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-6" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="&lt;li&gt;&lt;p&gt;Minimax explores possible move sequences&lt;/p&gt;&lt;/li&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="630" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-11" edge="1" parent="1" source="JyAuPF43QcO3eOV_d5FG-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;defaultLabelBackgroundColor=page;" target="JyAuPF43QcO3eOV_d5FG-10" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-19" connectable="0" parent="JyAuPF43QcO3eOV_d5FG-11" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];inheritText=1;defaultLabelBackgroundColor=page;" value="Evaluation Scores" vertex="1">
+          <mxGeometry relative="1" x="0.05" y="3" as="geometry">
+            <mxPoint x="-2" y="13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-8" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="The Evaluation Function scores the resulting positions." vertex="1">
+          <mxGeometry height="60" width="120" x="830" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-13" edge="1" parent="1" source="JyAuPF43QcO3eOV_d5FG-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;defaultLabelBackgroundColor=page;" target="JyAuPF43QcO3eOV_d5FG-12" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-20" connectable="0" parent="JyAuPF43QcO3eOV_d5FG-13" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];inheritText=1;defaultLabelBackgroundColor=page;" value="Best Move" vertex="1">
+          <mxGeometry relative="1" x="-0.075" y="-2" as="geometry">
+            <mxPoint y="8" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-10" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="Minimax returns the best-scoring move." vertex="1">
+          <mxGeometry height="60" width="120" x="1030" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="JyAuPF43QcO3eOV_d5FG-12" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="The Output displays the recommended move." vertex="1">
+          <mxGeometry height="60" width="120" x="1230" y="240" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
