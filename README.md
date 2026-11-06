@@ -12,7 +12,7 @@ The goal of this project is to develop a Java-based chess analyzer that evaluate
 - Implement the Minimax algorithm to search possible moves up to 3 plies ahead.
 - Improve search efficiency and allow deeper analysis.
 - Display the best recommended move and its evaluation score.
-- 
+  
 ## Future Plans
 - Increase the search depth to 2-6 turns or more.
 - Add a graphical chessboard using JavaFX.
