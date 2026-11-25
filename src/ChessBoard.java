@@ -39,7 +39,107 @@ public class ChessBoard {
         //column labels
         System.out.println("  a b c d e f g h");
     }
+    
+    //loads a position from FEN notation, e.g.
+    //"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    //only the piece placement and the side to move are used, the
+    //castling/en passant/move counters are ignored (not supported yet)
+    //throws IllegalArgumentException (and leaves the board unchanged) if invalid
+    public void loadFEN(String fen) {
+        String[] parts = fen.trim().split("\\s+");
+        //FEN lists rank 8 first, which matches board[0]
+        String[] ranks = parts[0].split("/");
 
+        if (ranks.length != 8) {
+            throw new IllegalArgumentException("FEN must have 8 ranks");
+        }
+
+        //build on a temporary board so a bad FEN doesn't corrupt this one
+        char[][] newBoard = new char[8][8];
+
+        for (int row = 0; row < 8; row++) {
+            int col = 0;
+
+            for (char c : ranks[row].toCharArray()) {
+                if (Character.isDigit(c)) {
+                    //a digit means that many empty squares
+                    int empty = c - '0';
+                    if (empty < 1 || empty > 8 || col + empty > 8) {
+                        throw new IllegalArgumentException(
+                            "Bad empty-square count in rank " + (8 - row));
+                    }
+                    for (int k = 0; k < empty; k++) {
+                        newBoard[row][col++] = '.';
+                    }
+                } else if ("rnbqkpRNBQKP".indexOf(c) != -1) {
+                    if (col >= 8) {
+                        throw new IllegalArgumentException(
+                            "Too many squares in rank " + (8 - row));
+                    }
+                    newBoard[row][col++] = c;
+                } else {
+                    throw new IllegalArgumentException(
+                        "Invalid character '" + c + "' in FEN");
+                }
+            }
+
+            if (col != 8) {
+                throw new IllegalArgumentException(
+                    "Rank " + (8 - row) + " doesn't have 8 squares");
+            }
+        }
+
+        //side to move defaults to white if left out
+        boolean white = true;
+        if (parts.length > 1) {
+            if (parts[1].equals("w")) {
+                white = true;
+            } else if (parts[1].equals("b")) {
+                white = false;
+            } else {
+                throw new IllegalArgumentException(
+                    "Side to move must be 'w' or 'b'");
+            }
+        }
+
+        board = newBoard;
+        whiteTurn = white;
+    }
+
+    //exports the current position as FEN
+    //castling, en passant, and move counters aren't tracked, so they
+    //are written as placeholders
+    public String getFEN() {
+        StringBuilder sb = new StringBuilder();
+
+        for (int row = 0; row < 8; row++) {
+            int empty = 0;
+
+            for (int col = 0; col < 8; col++) {
+                if (board[row][col] == '.') {
+                    empty++;
+                } else {
+                    if (empty > 0) {
+                        sb.append(empty);
+                        empty = 0;
+                    }
+                    sb.append(board[row][col]);
+                }
+            }
+
+            if (empty > 0) {
+                sb.append(empty);
+            }
+            if (row < 7) {
+                sb.append('/');
+            }
+        }
+
+        sb.append(whiteTurn ? " w" : " b");
+        sb.append(" - - 0 1");
+        return sb.toString();
+    }
+    
     public boolean isInsideBoard(int row, int col) {
         return row >= 0 && row < 8 && col >= 0 && col < 8;
     }
