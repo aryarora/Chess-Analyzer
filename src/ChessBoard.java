@@ -1,3 +1,5 @@
+import java.util.*;
+
 public class ChessBoard {
     private char[][] board = new char[8][8];
     //whose turn it is
@@ -539,5 +541,131 @@ public class ChessBoard {
         }
 
         return score;
+    }
+    //---------------- search ----------------
+
+    //how many moves ahead the search looks (1 = just your own next move)
+    //this will go up to 3 once we're ready for deeper searching
+    private static final int SEARCH_DEPTH = 1;
+
+    //score for checkmate, much bigger than any evaluation
+    private static final int MATE_SCORE = 100000;
+
+    //score of the best move from the last findBestMove call
+    private int lastBestScore = 0;
+
+    public int getLastBestScore() {
+        return lastBestScore;
+    }
+
+    //all legal moves for the side to move, as {startRow, startCol, endRow, endCol}
+    public List<int[]> getLegalMoves() {
+        List<int[]> moves = new ArrayList<>();
+
+        for (int startRow = 0; startRow < 8; startRow++) {
+            for (int startCol = 0; startCol < 8; startCol++) {
+                char piece = board[startRow][startCol];
+
+                if (piece == '.' || isWhitePiece(piece) != whiteTurn) {
+                    continue;
+                }
+
+                for (int endRow = 0; endRow < 8; endRow++) {
+                    for (int endCol = 0; endCol < 8; endCol++) {
+                        if (isLegalMove(startRow, startCol, endRow, endCol)) {
+                            moves.add(new int[] {startRow, startCol, endRow, endCol});
+                        }
+                    }
+                }
+            }
+        }
+
+        return moves;
+    }
+
+    //plays a move on the board and passes the turn, returns whatever was
+    //captured so undoMove can put it back
+    private char makeMove(int[] move) {
+        char captured = board[move[2]][move[3]];
+        board[move[2]][move[3]] = board[move[0]][move[1]];
+        board[move[0]][move[1]] = '.';
+        whiteTurn = !whiteTurn;
+        return captured;
+    }
+
+    private void undoMove(int[] move, char captured) {
+        board[move[0]][move[1]] = board[move[2]][move[3]];
+        board[move[2]][move[3]] = captured;
+        whiteTurn = !whiteTurn;
+    }
+
+    //converts a move to text like "e2e4"
+    public static String moveToString(int[] move) {
+        return "" + (char) ('a' + move[1]) + (8 - move[0]) +
+            (char) ('a' + move[3]) + (8 - move[2]);
+    }
+
+    //scores the position (from white's point of view) after looking
+    //"depth" more moves ahead, white picks the highest score and
+    //black picks the lowest
+    private int minimax(int depth) {
+        boolean white = whiteTurn;
+
+        //no legal moves means the game is over for the side to move
+        if (!hasLegalMove(white)) {
+            if (isKingInCheck(white)) {
+                //checkmate, a bigger depth left means it was found sooner
+                int mate = MATE_SCORE + depth;
+                return white ? -mate : mate;
+            }
+            //stalemate
+            return 0;
+        }
+
+        if (depth == 0) {
+            return evaluate();
+        }
+
+        int best = white ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+
+        for (int[] move : getLegalMoves()) {
+            char captured = makeMove(move);
+            int score = minimax(depth - 1);
+            undoMove(move, captured);
+
+            if (white) {
+                best = Math.max(best, score);
+            } else {
+                best = Math.min(best, score);
+            }
+        }
+
+        return best;
+    }
+
+    //finds the best move for the side to move as
+    //{startRow, startCol, endRow, endCol}, or null if there are no legal moves
+    //the score of the move is available from getLastBestScore()
+    public int[] findBestMove() {
+        boolean white = whiteTurn;
+        int[] bestMove = null;
+        int bestScore = 0;
+
+        for (int[] move : getLegalMoves()) {
+            char captured = makeMove(move);
+            int score = minimax(SEARCH_DEPTH - 1);
+            undoMove(move, captured);
+
+            if (bestMove == null ||
+                (white && score > bestScore) ||
+                (!white && score < bestScore)) {
+                bestMove = move;
+                bestScore = score;
+            }
+        }
+
+        //no moves: score is checkmate or stalemate
+        lastBestScore = (bestMove == null) ? minimax(0) : bestScore;
+        return bestMove;
     }
 }
