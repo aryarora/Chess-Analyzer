@@ -10,7 +10,6 @@ The goal of this project is to develop a Java-based chess analyzer that evaluate
 - Create a way to input or load a chess position using FEN notation.
 - Implement a board evaluation function that assigns values to pieces and estimates positional advantages.
 - Implement the Minimax algorithm to search possible move.
-- Improve search efficiency and allow deeper analysis.
 - Display the best recommended move and its evaluation score.
   
 ## Future Plans
