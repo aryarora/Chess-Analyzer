@@ -139,7 +139,7 @@ public class ChessBoard {
         sb.append(" - - 0 1");
         return sb.toString();
     }
-    
+
     public boolean isInsideBoard(int row, int col) {
         return row >= 0 && row < 8 && col >= 0 && col < 8;
     }
@@ -410,5 +410,134 @@ public class ChessBoard {
         board[startRow][startCol] = '.';
         whiteTurn = !whiteTurn;
         return true;
+    }
+    //---------------- evaluation ----------------
+
+    //piece-square tables, written from white's point of view with row 0
+    //at the top (rank 8), the same way the board array is laid out
+    //a higher number means that square is better for that piece
+    //I had to ask claude to give me a good table for each of the pieces
+    //since this was something I cannot calculate myself
+    //I did the evaluate method myself
+    private static final int[][] PAWN_TABLE = {
+        {  0,  0,  0,  0,  0,  0,  0,  0},
+        { 50, 50, 50, 50, 50, 50, 50, 50},
+        { 10, 10, 20, 30, 30, 20, 10, 10},
+        {  5,  5, 10, 25, 25, 10,  5,  5},
+        {  0,  0,  0, 20, 20,  0,  0,  0},
+        {  5, -5,-10,  0,  0,-10, -5,  5},
+        {  5, 10, 10,-20,-20, 10, 10,  5},
+        {  0,  0,  0,  0,  0,  0,  0,  0}
+    };
+
+    private static final int[][] KNIGHT_TABLE = {
+        {-50,-40,-30,-30,-30,-30,-40,-50},
+        {-40,-20,  0,  0,  0,  0,-20,-40},
+        {-30,  0, 10, 15, 15, 10,  0,-30},
+        {-30,  5, 15, 20, 20, 15,  5,-30},
+        {-30,  0, 15, 20, 20, 15,  0,-30},
+        {-30,  5, 10, 15, 15, 10,  5,-30},
+        {-40,-20,  0,  5,  5,  0,-20,-40},
+        {-50,-40,-30,-30,-30,-30,-40,-50}
+    };
+
+    private static final int[][] BISHOP_TABLE = {
+        {-20,-10,-10,-10,-10,-10,-10,-20},
+        {-10,  0,  0,  0,  0,  0,  0,-10},
+        {-10,  0,  5, 10, 10,  5,  0,-10},
+        {-10,  5,  5, 10, 10,  5,  5,-10},
+        {-10,  0, 10, 10, 10, 10,  0,-10},
+        {-10, 10, 10, 10, 10, 10, 10,-10},
+        {-10,  5,  0,  0,  0,  0,  5,-10},
+        {-20,-10,-10,-10,-10,-10,-10,-20}
+    };
+
+    private static final int[][] ROOK_TABLE = {
+        {  0,  0,  0,  0,  0,  0,  0,  0},
+        {  5, 10, 10, 10, 10, 10, 10,  5},
+        { -5,  0,  0,  0,  0,  0,  0, -5},
+        { -5,  0,  0,  0,  0,  0,  0, -5},
+        { -5,  0,  0,  0,  0,  0,  0, -5},
+        { -5,  0,  0,  0,  0,  0,  0, -5},
+        { -5,  0,  0,  0,  0,  0,  0, -5},
+        {  0,  0,  0,  5,  5,  0,  0,  0}
+    };
+
+    private static final int[][] QUEEN_TABLE = {
+        {-20,-10,-10, -5, -5,-10,-10,-20},
+        {-10,  0,  0,  0,  0,  0,  0,-10},
+        {-10,  0,  5,  5,  5,  5,  0,-10},
+        { -5,  0,  5,  5,  5,  5,  0, -5},
+        {  0,  0,  5,  5,  5,  5,  0, -5},
+        {-10,  5,  5,  5,  5,  5,  0,-10},
+        {-10,  0,  5,  0,  0,  0,  0,-10},
+        {-20,-10,-10, -5, -5,-10,-10,-20}
+    };
+
+    //middlegame king table: stay tucked away behind your pawns
+    private static final int[][] KING_TABLE = {
+        {-30,-40,-40,-50,-50,-40,-40,-30},
+        {-30,-40,-40,-50,-50,-40,-40,-30},
+        {-30,-40,-40,-50,-50,-40,-40,-30},
+        {-30,-40,-40,-50,-50,-40,-40,-30},
+        {-20,-30,-30,-40,-40,-30,-30,-20},
+        {-10,-20,-20,-20,-20,-20,-20,-10},
+        { 20, 20,  0,  0,  0,  0, 20, 20},
+        { 20, 30, 10,  0,  0, 10, 30, 20}
+    };
+
+    //material value in centipawns (100 = one pawn)
+    //kings are 0 since both sides always have one, and checkmate
+    //should be handled by the search rather than the evaluation
+    private static int pieceValue(char type) {
+        switch (type) {
+            case 'p': return 100;
+            case 'n': return 320;
+            case 'b': return 330;
+            case 'r': return 500;
+            case 'q': return 900;
+            default:  return 0;
+        }
+    }
+
+    //row/col here are from the piece owner's point of view
+    private static int positionValue(char type, int row, int col) {
+        switch (type) {
+            case 'p': return PAWN_TABLE[row][col];
+            case 'n': return KNIGHT_TABLE[row][col];
+            case 'b': return BISHOP_TABLE[row][col];
+            case 'r': return ROOK_TABLE[row][col];
+            case 'q': return QUEEN_TABLE[row][col];
+            case 'k': return KING_TABLE[row][col];
+            default:  return 0;
+        }
+    }
+
+    //scores the position in centipawns from white's point of view
+    //positive = white is better, negative = black is better
+    public int evaluate() {
+        int score = 0;
+
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                char piece = board[row][col];
+
+                if (piece == '.') {
+                    continue;
+                }
+
+                boolean white = isWhitePiece(piece);
+                char type = Character.toLowerCase(piece);
+                //the tables are from white's side, so flip the rows for black
+                int tableRow = white ? row : 7 - row;
+
+                int value = pieceValue(type) +
+                    positionValue(type, tableRow, col);
+
+                score += white ? value : -value;
+            }
+        }
+
+        return score;
     }
 }
