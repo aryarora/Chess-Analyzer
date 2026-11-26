@@ -1,9 +1,18 @@
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ChessBoard {
     private char[][] board = new char[8][8];
     //whose turn it is
     private boolean whiteTurn = true;
+
+    //castling rights: {white king side, white queen side,
+    //black king side, black queen side}
+    private boolean[] castling = {true, true, true, true};
+
+    //square a pawn could capture onto en passant right now (row -1 = none)
+    private int epRow = -1;
+    private int epCol = -1;
 
     public ChessBoard() {
         initializeBoard();
@@ -25,6 +34,11 @@ public class ChessBoard {
                 board[i][j] = '.';
             }
         }
+
+        //full castling rights, no en passant square
+        castling = new boolean[] {true, true, true, true};
+        epRow = -1;
+        epCol = -1;
     }
 
     public void printBoard() {
@@ -41,11 +55,12 @@ public class ChessBoard {
         //column labels
         System.out.println("  a b c d e f g h");
     }
-    
+
     //loads a position from FEN notation, e.g.
     //"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-    //only the piece placement and the side to move are used, the
-    //castling/en passant/move counters are ignored (not supported yet)
+    //uses the piece placement, side to move, castling rights, and en passant
+    //square (a missing castling/en passant field means none), the move
+    //counters are ignored
     //throws IllegalArgumentException (and leaves the board unchanged) if invalid
     public void loadFEN(String fen) {
         String[] parts = fen.trim().split("\\s+");
@@ -104,13 +119,42 @@ public class ChessBoard {
             }
         }
 
+        //castling rights, "-" or any of KQkq
+        boolean[] newCastling = new boolean[4];
+        if (parts.length > 2 && !parts[2].equals("-")) {
+            for (char c : parts[2].toCharArray()) {
+                int index = "KQkq".indexOf(c);
+                if (index == -1) {
+                    throw new IllegalArgumentException(
+                        "Invalid castling field '" + parts[2] + "'");
+                }
+                newCastling[index] = true;
+            }
+        }
+
+        //en passant square, "-" or something like "e3"
+        int newEpRow = -1;
+        int newEpCol = -1;
+        if (parts.length > 3 && !parts[3].equals("-")) {
+            String ep = parts[3];
+            if (ep.length() != 2 || ep.charAt(0) < 'a' || ep.charAt(0) > 'h' ||
+                (ep.charAt(1) != '3' && ep.charAt(1) != '6')) {
+                throw new IllegalArgumentException(
+                    "Invalid en passant square '" + ep + "'");
+            }
+            newEpCol = ep.charAt(0) - 'a';
+            newEpRow = 8 - (ep.charAt(1) - '0');
+        }
+
         board = newBoard;
         whiteTurn = white;
+        castling = newCastling;
+        epRow = newEpRow;
+        epCol = newEpCol;
     }
 
     //exports the current position as FEN
-    //castling, en passant, and move counters aren't tracked, so they
-    //are written as placeholders
+    //the move counters aren't tracked, so they are written as 0 1
     public String getFEN() {
         StringBuilder sb = new StringBuilder();
 
@@ -138,7 +182,20 @@ public class ChessBoard {
         }
 
         sb.append(whiteTurn ? " w" : " b");
-        sb.append(" - - 0 1");
+
+        sb.append(' ');
+        String rights = (castling[0] ? "K" : "") + (castling[1] ? "Q" : "") +
+            (castling[2] ? "k" : "") + (castling[3] ? "q" : "");
+        sb.append(rights.isEmpty() ? "-" : rights);
+
+        sb.append(' ');
+        if (epRow == -1) {
+            sb.append('-');
+        } else {
+            sb.append((char) ('a' + epCol)).append(8 - epRow);
+        }
+
+        sb.append(" 0 1");
         return sb.toString();
     }
 
@@ -203,6 +260,12 @@ public class ChessBoard {
             return false;
         }
 
+        //kings move two squares sideways to castle
+        if (Character.toLowerCase(piece) == 'k' && startRow == endRow &&
+            Math.abs(endCol - startCol) == 2) {
+            return isValidCastle(startRow, startCol, endCol);
+        }
+
         //pawns are the only piece whose movement differs from how they attack
         if (Character.toLowerCase(piece) == 'p') {
             return isValidPawnMove(startRow, startCol, endRow, endCol);
@@ -241,8 +304,42 @@ public class ChessBoard {
                 board[startRow + direction][startCol] == '.';
         }
 
-        //diagonal move is only allowed when capturing
-        return destination != '.' && canAttack(startRow, startCol, endRow, endCol);
+        //diagonal move is only allowed when capturing (en passant included)
+        if (!canAttack(startRow, startCol, endRow, endCol)) {
+            return false;
+        }
+        if (destination != '.') {
+            return true;
+        }
+
+        //en passant: capture onto the square the enemy pawn just skipped over
+        return endRow == epRow && endCol == epCol &&
+            endRow == (white ? 2 : 5) &&
+            board[startRow][endCol] == (white ? 'p' : 'P');
+    }
+
+    //castling needs the rights, the rook in its corner, and nothing in between
+    //(not castling out of, through, or into check is handled in isSafeMove)
+    private boolean isValidCastle(int row, int startCol, int endCol) {
+        boolean white = isWhitePiece(board[row][startCol]);
+        int homeRow = white ? 7 : 0;
+
+        if (row != homeRow || startCol != 4) {
+            return false;
+        }
+
+        boolean kingSide = endCol > startCol;
+        int rightsIndex = (white ? 0 : 2) + (kingSide ? 0 : 1);
+        if (!castling[rightsIndex]) {
+            return false;
+        }
+
+        int rookCol = kingSide ? 7 : 0;
+        if (board[row][rookCol] != (white ? 'R' : 'r')) {
+            return false;
+        }
+
+        return isPathClear(row, startCol, row, rookCol);
     }
 
     //checks if the piece at the start square attacks the end square
@@ -356,14 +453,30 @@ public class ChessBoard {
         char piece = board[startRow][startCol];
         boolean white = isWhitePiece(piece);
 
-        char captured = board[endRow][endCol];
-        board[endRow][endCol] = piece;
-        board[startRow][startCol] = '.';
+        //castling isn't allowed out of check or through an attacked square
+        if (Character.toLowerCase(piece) == 'k' &&
+            Math.abs(endCol - startCol) == 2) {
+            if (isKingInCheck(white)) {
+                return false;
+            }
 
+            //test the king standing on the square it passes over
+            int midCol = (startCol + endCol) / 2;
+            board[startRow][midCol] = piece;
+            board[startRow][startCol] = '.';
+            boolean passesThroughCheck = isKingInCheck(white);
+            board[startRow][startCol] = piece;
+            board[startRow][midCol] = '.';
+
+            if (passesThroughCheck) {
+                return false;
+            }
+        }
+
+        int[] move = {startRow, startCol, endRow, endCol};
+        Undo undo = makeMove(move);
         boolean leavesKingInCheck = isKingInCheck(white);
-
-        board[startRow][startCol] = piece;
-        board[endRow][endCol] = captured;
+        undoMove(move, undo);
 
         return !leavesKingInCheck;
     }
@@ -403,24 +516,34 @@ public class ChessBoard {
         return !isKingInCheck(white) && !hasLegalMove(white);
     }
 
+    //plays a move for the side to move, returns false if it isn't legal
+    //a pawn reaching the last row promotes to a queen
     public boolean movePiece(int startRow, int startCol,
                              int endRow, int endCol) {
+        return movePiece(startRow, startCol, endRow, endCol, 'q');
+    }
+
+    //same, but lets you choose the promotion piece (q, r, b, or n)
+    public boolean movePiece(int startRow, int startCol,
+                             int endRow, int endCol, char promotion) {
         if (!isLegalMove(startRow, startCol, endRow, endCol)) {
             return false;
         }
-        board[endRow][endCol] = board[startRow][startCol];
-        board[startRow][startCol] = '.';
-        whiteTurn = !whiteTurn;
+
+        char promo = Character.toLowerCase(promotion);
+        if ("qrbn".indexOf(promo) == -1) {
+            promo = 'q';
+        }
+
+        makeMove(new int[] {startRow, startCol, endRow, endCol, promo});
         return true;
     }
+
     //---------------- evaluation ----------------
 
     //piece-square tables, written from white's point of view with row 0
     //at the top (rank 8), the same way the board array is laid out
     //a higher number means that square is better for that piece
-    //I had to ask claude to give me a good table for each of the pieces
-    //since this was something I cannot calculate myself
-    //I did the evaluate method myself
     private static final int[][] PAWN_TABLE = {
         {  0,  0,  0,  0,  0,  0,  0,  0},
         { 50, 50, 50, 50, 50, 50, 50, 50},
@@ -542,6 +665,7 @@ public class ChessBoard {
 
         return score;
     }
+
     //---------------- search ----------------
 
     //how many moves ahead the search looks (1 = just your own next move)
@@ -558,7 +682,9 @@ public class ChessBoard {
         return lastBestScore;
     }
 
-    //all legal moves for the side to move, as {startRow, startCol, endRow, endCol}
+    //all legal moves for the side to move, as
+    //{startRow, startCol, endRow, endCol, promotion}
+    //promotion is 0 for normal moves, or q/r/b/n when a pawn promotes
     public List<int[]> getLegalMoves() {
         List<int[]> moves = new ArrayList<>();
 
@@ -572,8 +698,20 @@ public class ChessBoard {
 
                 for (int endRow = 0; endRow < 8; endRow++) {
                     for (int endCol = 0; endCol < 8; endCol++) {
-                        if (isLegalMove(startRow, startCol, endRow, endCol)) {
-                            moves.add(new int[] {startRow, startCol, endRow, endCol});
+                        if (!isLegalMove(startRow, startCol, endRow, endCol)) {
+                            continue;
+                        }
+
+                        //a pawn reaching the last row can become 4 different pieces
+                        if (Character.toLowerCase(piece) == 'p' &&
+                            (endRow == 0 || endRow == 7)) {
+                            for (char promo : new char[] {'q', 'r', 'b', 'n'}) {
+                                moves.add(new int[] {startRow, startCol,
+                                    endRow, endCol, promo});
+                            }
+                        } else {
+                            moves.add(new int[] {startRow, startCol,
+                                endRow, endCol, 0});
                         }
                     }
                 }
@@ -583,26 +721,139 @@ public class ChessBoard {
         return moves;
     }
 
-    //plays a move on the board and passes the turn, returns whatever was
-    //captured so undoMove can put it back
-    private char makeMove(int[] move) {
-        char captured = board[move[2]][move[3]];
-        board[move[2]][move[3]] = board[move[0]][move[1]];
-        board[move[0]][move[1]] = '.';
-        whiteTurn = !whiteTurn;
-        return captured;
+    //everything makeMove changes, so undoMove can put it all back
+    private static class Undo {
+        char movedPiece;      //the piece before moving (a pawn if it promoted)
+        char captured;        //what was captured ('.' if nothing)
+        int capturedRow;      //where it stood (not the end square for en passant)
+        int capturedCol;
+        boolean[] castling;   //castling rights before the move
+        int epRow;            //en passant square before the move
+        int epCol;
     }
 
-    private void undoMove(int[] move, char captured) {
-        board[move[0]][move[1]] = board[move[2]][move[3]];
-        board[move[2]][move[3]] = captured;
+    //plays a move (castling, en passant, and promotion included), updates the
+    //castling rights and en passant square, and passes the turn
+    //the move is {startRow, startCol, endRow, endCol} plus an optional
+    //promotion piece, and it must already be known to be valid
+    private Undo makeMove(int[] move) {
+        int startRow = move[0];
+        int startCol = move[1];
+        int endRow = move[2];
+        int endCol = move[3];
+
+        char piece = board[startRow][startCol];
+        boolean white = isWhitePiece(piece);
+        char type = Character.toLowerCase(piece);
+
+        Undo undo = new Undo();
+        undo.movedPiece = piece;
+        undo.captured = board[endRow][endCol];
+        undo.capturedRow = endRow;
+        undo.capturedCol = endCol;
+        undo.castling = castling.clone();
+        undo.epRow = epRow;
+        undo.epCol = epCol;
+
+        //en passant: a pawn moving diagonally onto an empty square
+        //captures the pawn standing beside it instead
+        if (type == 'p' && startCol != endCol && board[endRow][endCol] == '.') {
+            undo.capturedRow = startRow;
+            undo.capturedCol = endCol;
+            undo.captured = board[startRow][endCol];
+            board[startRow][endCol] = '.';
+        }
+
+        board[endRow][endCol] = piece;
+        board[startRow][startCol] = '.';
+
+        //promotion (a queen unless told otherwise)
+        if (type == 'p' && (endRow == 0 || endRow == 7)) {
+            char promo = (move.length > 4 && move[4] != 0)
+                ? Character.toLowerCase((char) move[4]) : 'q';
+            board[endRow][endCol] = white ? Character.toUpperCase(promo) : promo;
+        }
+
+        //castling: the rook jumps over the king
+        if (type == 'k' && Math.abs(endCol - startCol) == 2) {
+            int rookFromCol = endCol > startCol ? 7 : 0;
+            int rookToCol = (startCol + endCol) / 2;
+            board[endRow][rookToCol] = board[endRow][rookFromCol];
+            board[endRow][rookFromCol] = '.';
+        }
+
+        //moving from or capturing on a king/rook home square loses that right
+        clearCastlingRights(startRow, startCol);
+        clearCastlingRights(endRow, endCol);
+
+        //a pawn moving two squares can be captured en passant on the next move
+        if (type == 'p' && Math.abs(endRow - startRow) == 2) {
+            epRow = (startRow + endRow) / 2;
+            epCol = startCol;
+        } else {
+            epRow = -1;
+            epCol = -1;
+        }
+
+        whiteTurn = !whiteTurn;
+        return undo;
+    }
+
+    private void undoMove(int[] move, Undo undo) {
+        int startRow = move[0];
+        int startCol = move[1];
+        int endRow = move[2];
+        int endCol = move[3];
+
+        board[startRow][startCol] = undo.movedPiece;
+        board[endRow][endCol] = '.';
+        board[undo.capturedRow][undo.capturedCol] = undo.captured;
+
+        //put the castling rook back
+        if (Character.toLowerCase(undo.movedPiece) == 'k' &&
+            Math.abs(endCol - startCol) == 2) {
+            int rookFromCol = endCol > startCol ? 7 : 0;
+            int rookToCol = (startCol + endCol) / 2;
+            board[endRow][rookFromCol] = board[endRow][rookToCol];
+            board[endRow][rookToCol] = '.';
+        }
+
+        castling = undo.castling;
+        epRow = undo.epRow;
+        epCol = undo.epCol;
         whiteTurn = !whiteTurn;
     }
 
-    //converts a move to text like "e2e4"
+    //a king or rook leaving (or being captured on) its home square
+    //means that castling right is gone for good
+    private void clearCastlingRights(int row, int col) {
+        if (row == 7 && col == 4) {
+            castling[0] = false;
+            castling[1] = false;
+        } else if (row == 7 && col == 7) {
+            castling[0] = false;
+        } else if (row == 7 && col == 0) {
+            castling[1] = false;
+        } else if (row == 0 && col == 4) {
+            castling[2] = false;
+            castling[3] = false;
+        } else if (row == 0 && col == 7) {
+            castling[2] = false;
+        } else if (row == 0 && col == 0) {
+            castling[3] = false;
+        }
+    }
+
+    //converts a move to text like "e2e4" (or "e7e8q" for a promotion)
     public static String moveToString(int[] move) {
-        return "" + (char) ('a' + move[1]) + (8 - move[0]) +
+        String text = "" + (char) ('a' + move[1]) + (8 - move[0]) +
             (char) ('a' + move[3]) + (8 - move[2]);
+
+        if (move.length > 4 && move[4] != 0) {
+            text += (char) move[4];
+        }
+
+        return text;
     }
 
     //scores the position (from white's point of view) after looking
@@ -629,9 +880,9 @@ public class ChessBoard {
         int best = white ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 
         for (int[] move : getLegalMoves()) {
-            char captured = makeMove(move);
+            Undo undo = makeMove(move);
             int score = minimax(depth - 1);
-            undoMove(move, captured);
+            undoMove(move, undo);
 
             if (white) {
                 best = Math.max(best, score);
@@ -644,7 +895,8 @@ public class ChessBoard {
     }
 
     //finds the best move for the side to move as
-    //{startRow, startCol, endRow, endCol}, or null if there are no legal moves
+    //{startRow, startCol, endRow, endCol, promotion}, or null if there are
+    //no legal moves
     //the score of the move is available from getLastBestScore()
     public int[] findBestMove() {
         boolean white = whiteTurn;
@@ -652,9 +904,9 @@ public class ChessBoard {
         int bestScore = 0;
 
         for (int[] move : getLegalMoves()) {
-            char captured = makeMove(move);
+            Undo undo = makeMove(move);
             int score = minimax(SEARCH_DEPTH - 1);
-            undoMove(move, captured);
+            undoMove(move, undo);
 
             if (bestMove == null ||
                 (white && score > bestScore) ||
